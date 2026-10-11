@@ -20,7 +20,7 @@
 - `android/`: מעטפת Android ב־Java עם WebView מקומי ו־Google Identity Services.
 - `ios/`: מעטפת iPhone ב־Swift עם WKWebView מקומי, OAuth עם PKCE ו־Keychain.
 - `tests/`: בדיקות ללא תלות בספריות חיצוניות.
-- `.github/workflows/build.yml`: הגדרת בנייה ל־GitHub Actions. טרם הופעלה.
+- `.github/workflows/build.yml`: בנייה ובדיקות אוטומטיות ל־GitHub Actions בכל עדכון לענף main.
 
 ## בדיקות
 

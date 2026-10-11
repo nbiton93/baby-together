@@ -1,0 +1,72 @@
+name: Build Baby Together
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/check.cjs
+      - run: node --test tests/*.test.cjs
+        env:
+          TZ: UTC
+  android:
+    needs: core
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Compile and lint Android
+        env:
+          GOOGLE_CONFIGURED: ${{ vars.GOOGLE_ANDROID_CONFIGURED || 'false' }}
+        run: gradle -p android --no-daemon assembleRelease lintRelease -PgoogleConfigured="$GOOGLE_CONFIGURED"
+      - name: Package unsigned build and signing tool
+        run: |
+          mkdir -p out/android
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk out/android/baby-together-unsigned.apk
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" out/android/apksigner.jar
+          cp scripts/sign-android.sh out/android/
+          cp android/app/build/reports/lint-results-release.html out/android/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: baby-together-android-unsigned
+          path: out/android/
+          retention-days: 30
+  ios:
+    needs: core
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate --spec ios/project.yml
+      - name: Compile iPhone simulator app
+        env:
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          GOOGLE_URL_SCHEME: ${{ vars.GOOGLE_IOS_URL_SCHEME || 'com.natibiton.babytogether' }}
+        run: |
+          xcodebuild -project ios/BabyTogether.xcodeproj -scheme BabyTogether -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build/DerivedData CODE_SIGNING_ALLOWED=NO GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" GOOGLE_URL_SCHEME="$GOOGLE_URL_SCHEME" build
+          ditto -c -k --sequesterRsrc --keepParent ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app baby-together-ios-simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: baby-together-ios-simulator
+          path: baby-together-ios-simulator.zip
+          retention-days: 30

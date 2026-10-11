@@ -1,0 +1,8 @@
+{
+  "name": "baby-together",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone offline baby tracker for Android and iOS",
+  "scripts": {"test": "node --test tests/*.test.cjs", "check": "node scripts/check.cjs"},
+  "engines": {"node": ">=20"}
+}

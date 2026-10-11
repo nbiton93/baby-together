@@ -1,0 +1,21 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.natibiton.babytogether'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.natibiton.babytogether'
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+        buildConfigField 'boolean', 'GOOGLE_CONFIGURED', providers.gradleProperty('googleConfigured').getOrElse('false') == 'true' ? 'true' : 'false'
+    }
+    buildFeatures { buildConfig true }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    sourceSets { main { assets.srcDirs = ['../../shared'] } }
+    buildTypes { release { minifyEnabled false } }
+}
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'com.google.android.gms:play-services-auth:22.0.0'
+}

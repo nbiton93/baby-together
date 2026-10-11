@@ -1,0 +1,7 @@
+(function(){'use strict';const pending=new Map();let sequence=0;const native=Boolean(window.BabyNative||window.webkit?.messageHandlers?.baby),preview=!native&&new URLSearchParams(location.search).has('preview');
+window.BTReply=function(id,ok,value){const p=pending.get(id);if(!p)return;clearTimeout(p.timer);pending.delete(id);ok?p.resolve(value):p.reject(new Error(value||'הפעולה לא הושלמה'));};
+window.BTNative={native,preview,call:function(method,args={}){
+ if(!native){if(!preview)return Promise.reject(new Error('יש לפתוח את האפליקציה המותקנת על הטלפון'));if(method==='read')return Promise.resolve(localStorage.getItem('bt-preview'));if(method==='write'){localStorage.setItem('bt-preview',args.data);return Promise.resolve(true);}if(method==='config')return Promise.resolve({googleConfigured:false,platform:'preview'});if(method==='uuid')return Promise.resolve(crypto.randomUUID());return Promise.reject(new Error('פעולה זו זמינה רק באפליקציה המותקנת'));}
+ const id=String(++sequence);return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(id);reject(new Error('הפעולה נמשכה זמן רב. אפשר לנסות שוב'));},['authorize','export'].includes(method)?180000:45000);pending.set(id,{resolve,reject,timer});const request={id,method,args};if(window.BabyNative)window.BabyNative.postMessage(JSON.stringify(request));else window.webkit.messageHandlers.baby.postMessage(request);});
+}};
+})();
