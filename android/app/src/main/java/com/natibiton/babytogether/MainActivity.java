@@ -1,6 +1,5 @@
 package com.natibiton.babytogether;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -15,6 +14,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import androidx.webkit.WebViewAssetLoader;
+import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
 import com.google.android.gms.auth.api.identity.AuthorizationRequest;
 import com.google.android.gms.auth.api.identity.AuthorizationResult;
 import com.google.android.gms.auth.api.identity.ClearTokenRequest;
@@ -30,7 +31,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends Activity {
+public class MainActivity extends ComponentActivity {
     private static final String SCOPE="https://www.googleapis.com/auth/drive.file";
     private static final int AUTH=4101, EXPORT=4102, MAX_BYTES=16*1024*1024;
     private final ExecutorService io=Executors.newSingleThreadExecutor();
@@ -54,7 +55,12 @@ public class MainActivity extends Activity {
             }
         });
         web.addJavascriptInterface(new Bridge(),"BabyNative");setContentView(web);
-        if(android.os.Build.VERSION.SDK_INT>=30){web.setOnApplyWindowInsetsListener((v,insets)->{android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());v.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;});}
+        getOnBackPressedDispatcher().addCallback(this,new OnBackPressedCallback(true){
+            @Override public void handleOnBackPressed(){
+                web.evaluateJavascript("(function(){const m=document.querySelector('#modal');if(m&&m.open){m.dispatchEvent(new Event('cancel',{cancelable:true}))&&m.close();return true;}return false;})()",result->{if(!"true".equals(result))finish();});
+            }
+        });
+        if(android.os.Build.VERSION.SDK_INT>=30){web.setOnApplyWindowInsetsListener((v,insets)->{android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout()|WindowInsets.Type.ime());v.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;});}
         web.loadUrl("https://appassets.androidplatform.net/assets/index.html");
     }
     private class Bridge {
@@ -130,6 +136,5 @@ public class MainActivity extends Activity {
     }
     private String safeMessage(Exception e){return e instanceof IOException&&e.getMessage()!=null&&e.getMessage().matches(".*[א-ת].*")?e.getMessage():"הפעולה לא הושלמה. הרישומים הקודמים נשמרו.";}
     private void reply(String id,boolean ok,Object value){runOnUiThread(()->{if(isFinishing()||web==null)return;String json=new JSONArray().put(id).put(ok).put(value).toString();web.evaluateJavascript("window.BTReply.apply(null,"+json+");",null);});}
-    @Override public void onBackPressed(){web.evaluateJavascript("(function(){const m=document.querySelector('#modal');if(m.open){m.close();return true;}return false;})()",result->{if(!"true".equals(result))finish();});}
     @Override protected void onDestroy(){token=null;io.shutdown();if(web!=null){web.removeJavascriptInterface("BabyNative");web.destroy();web=null;}super.onDestroy();}
 }

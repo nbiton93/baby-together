@@ -38,6 +38,28 @@ jobs:
         env:
           GOOGLE_CONFIGURED: ${{ vars.GOOGLE_ANDROID_CONFIGURED || 'false' }}
         run: gradle -p android --no-daemon assembleRelease lintRelease -PgoogleConfigured="$GOOGLE_CONFIGURED"
+      - name: Allow this runner to use the emulator
+        run: sudo setfacl -m u:"$(id -un)":rw /dev/kvm
+      - name: Test offline journal in Android 16
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: bash scripts/emulator-smoke.sh
+      - name: Keep emulator reports and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baby-together-android-smoke
+          path: |
+            out/android-smoke/
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Package unsigned build and signing tool
         run: |
           mkdir -p out/android
