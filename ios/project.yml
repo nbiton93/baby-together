@@ -26,6 +26,8 @@ targets:
       path: build/Info.plist
       properties:
         CFBundleDisplayName: Baby Together
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         GoogleClientID: $(GOOGLE_CLIENT_ID)
         CFBundleURLTypes:
           - CFBundleURLName: Google

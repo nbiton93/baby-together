@@ -93,6 +93,8 @@ jobs:
           xcodebuild -project ios/BabyTogether.xcodeproj -scheme BabyTogether -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build/DerivedData CODE_SIGNING_ALLOWED=NO GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" GOOGLE_URL_SCHEME="$GOOGLE_URL_SCHEME" build
           /usr/libexec/PlistBuddy -c 'Print :GoogleClientID' ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app/Info.plist
           /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app/Info.plist
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app/Info.plist)" = '0.2.0'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app/Info.plist)" = '2'
           ditto -c -k --sequesterRsrc --keepParent ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app baby-together-ios-simulator.zip
       - uses: actions/upload-artifact@v4
         with:
