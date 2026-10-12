@@ -1,0 +1,15 @@
+{
+  "projectId": "baby-together",
+  "projectNumber": "486400608243",
+  "scope": "https://www.googleapis.com/auth/drive.file",
+  "android": {
+    "packageName": "com.natibiton.babytogether",
+    "clientId": "486400608243-euc8t1g3o7a1jukrm763sfldjg7l2aqf.apps.googleusercontent.com",
+    "signingCertificateSha1": "9D:06:C8:E2:14:DB:0D:27:D2:9E:AB:8F:54:4A:C7:66:D0:66:D9:1C"
+  },
+  "ios": {
+    "bundleId": "com.natibiton.babytogether",
+    "clientId": "486400608243-5hk695jqrqbfiknib71a15snt1daf80l.apps.googleusercontent.com",
+    "urlScheme": "com.googleusercontent.apps.486400608243-5hk695jqrqbfiknib71a15snt1daf80l"
+  }
+}

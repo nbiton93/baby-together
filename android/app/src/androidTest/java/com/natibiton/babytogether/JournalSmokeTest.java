@@ -78,8 +78,17 @@ public class JournalSmokeTest {
             until("!document.querySelector('#modal').open");
             current.onActivity(activity->assertFalse(activity.isFinishing()));
             js("document.querySelector('[data-action=tab][data-tab=family]').click()");
-            until("document.querySelector('#app').textContent.includes('הרישומים נשמרים בטלפון בלבד')");
-            screenshot("sharing-unconfigured.png");
+            if(BuildConfig.GOOGLE_CONFIGURED){
+                until("document.querySelector('[data-action=connect]')");
+                assertEquals("\"חיבור ל־Google Drive\"",js("document.querySelector('[data-action=connect]').textContent"));
+                assertEquals("false",js("document.querySelector('[data-action=connect]').disabled"));
+                assertEquals("true",js("document.querySelector('[data-action=share]').disabled"));
+                assertEquals("true",js("document.querySelector('[data-action=pick]').disabled"));
+                assertFalse(js("document.querySelector('#app').textContent").contains("חיבור Google עדיין לא הוגדר"));
+            }else{
+                until("document.querySelector('#app').textContent.includes('הרישומים נשמרים בטלפון בלבד')");
+            }
+            screenshot("sharing-screen.png");
         }
     }
 }
