@@ -6,9 +6,11 @@
 
 ב־GitHub: הגדרות החשבון → Applications → Installed GitHub Apps → Configure של חיבור ChatGPT/Codex → הרשאת גישה למאגר `baby-together`. אם החיבור אינו מופיע ברשימת ההתקנות, יש להשלים את התקנתו דרך חיבור GitHub ב־ChatGPT. אין לשלוח סיסמה או token בצ׳אט.
 
-תוכן הפרויקט מיועד לשורש המאגר. אין לכלול מפתחות חתימה, תיקיות build או גיבויי תינוקת. ה־workflow יפעל אחרי push ל־main, ויבדוק גם קומפילציה אמיתית ולינט. ייתכנו תיקוני בנייה שיתגלו רק בשלב זה.
+תוכן הפרויקט נמצא בשורש המאגר. אין לכלול מפתחות חתימה, תיקיות build או גיבויי תינוקת. בניית Android, לינט, בדיקת אמולטור ובניית iOS Simulator עברו ב־[ריצה 38128709679](https://github.com/nbiton93/baby-together/actions/runs/38128709679).
 
 ## 2. Android ו־Google
+
+מפתח Android קבוע כבר נוצר ונעשה בו שימוש לחתימת גרסה 0.1.0. אין ליצור מפתח חלופי לעדכונים. ההוראות המלאות לכלי בדפדפן, כולל טביעת החתימה הציבורית, נמצאות ב־[GOOGLE_BROWSER_SETUP.md](GOOGLE_BROWSER_SETUP.md).
 
 1. בנה APK וחתום במפתח פרטי קבוע. שמור גיבוי פרטי של המפתח והסיסמה.
 2. ב־Google Cloud צור פרויקט, הפעל Google Drive API ו־Google Picker API.
