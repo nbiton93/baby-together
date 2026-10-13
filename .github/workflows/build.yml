@@ -80,6 +80,8 @@ jobs:
     needs: core
     runs-on: macos-15
     timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
       - run: brew install xcodegen
@@ -91,13 +93,21 @@ jobs:
         run: |
           node scripts/check-google-config.cjs ios
           xcodebuild -project ios/BabyTogether.xcodeproj -scheme BabyTogether -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build/DerivedData CODE_SIGNING_ALLOWED=NO GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" GOOGLE_URL_SCHEME="$GOOGLE_URL_SCHEME" build
-          /usr/libexec/PlistBuddy -c 'Print :GoogleClientID' ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app/Info.plist
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app/Info.plist
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app/Info.plist)" = '0.2.0'
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app/Info.plist)" = '2'
+          python3 scripts/check-ios-app.py ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app --platform iPhoneSimulator
           ditto -c -k --sequesterRsrc --keepParent ios/build/DerivedData/Build/Products/Debug-iphonesimulator/BabyTogether.app baby-together-ios-simulator.zip
       - uses: actions/upload-artifact@v4
         with:
           name: baby-together-ios-simulator
           path: baby-together-ios-simulator.zip
+          retention-days: 30
+      - name: Archive for physical iPhone without signing
+        run: |
+          xcodebuild -project ios/BabyTogether.xcodeproj -scheme BabyTogether -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -archivePath ios/build/BabyTogether-unsigned.xcarchive CODE_SIGNING_ALLOWED=NO archive
+          python3 scripts/check-ios-app.py ios/build/BabyTogether-unsigned.xcarchive/Products/Applications/BabyTogether.app --platform iPhoneOS
+          ditto -c -k --sequesterRsrc --keepParent ios/build/BabyTogether-unsigned.xcarchive baby-together-ios-device-unsigned.zip
+      - name: Keep device build for signing preparation
+        uses: actions/upload-artifact@v4
+        with:
+          name: baby-together-ios-device-unsigned
+          path: baby-together-ios-device-unsigned.zip
           retention-days: 30

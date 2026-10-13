@@ -3,6 +3,9 @@ options:
   bundleIdPrefix: com.natibiton
   deploymentTarget:
     iOS: '16.0'
+configFiles:
+  Debug: Google.xcconfig
+  Release: Google.xcconfig
 settings:
   base:
     SWIFT_VERSION: '5.0'
@@ -10,8 +13,6 @@ settings:
     PRODUCT_BUNDLE_IDENTIFIER: com.natibiton.babytogether
     MARKETING_VERSION: '0.2.0'
     CURRENT_PROJECT_VERSION: '2'
-    GOOGLE_CLIENT_ID: ''
-    GOOGLE_URL_SCHEME: com.natibiton.babytogether
     TARGETED_DEVICE_FAMILY: '1,2'
 targets:
   BabyTogether:
@@ -32,8 +33,11 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: Google
             CFBundleURLSchemes: ['$(GOOGLE_URL_SCHEME)']
+        CFBundleDevelopmentRegion: he
+        CFBundleLocalizations: [he]
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         ITSAppUsesNonExemptEncryption: false
         UIApplicationSupportsIndirectInputEvents: true
         NSAppTransportSecurity:

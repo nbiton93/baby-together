@@ -1,0 +1,3 @@
+// Public OAuth identifiers. Never put tokens or private keys in this file.
+GOOGLE_CLIENT_ID = 486400608243-5hk695jqrqbfiknib71a15snt1daf80l.apps.googleusercontent.com
+GOOGLE_URL_SCHEME = com.googleusercontent.apps.486400608243-5hk695jqrqbfiknib71a15snt1daf80l

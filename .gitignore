@@ -14,3 +14,8 @@ local.properties
 *.zip
 secrets/
 node_modules/
+*.p8
+*.pem
+*.key
+*.csr
+*.xcarchive/
