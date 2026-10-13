@@ -27,6 +27,10 @@ C.parseState(JSON.stringify(fixture));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const server = createServer((req, res) => {
   const name = new URL(req.url, 'http://localhost').pathname.slice(1) || 'index.html';
+  if (name === 'csp-probe.html') {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.end(`<!doctype html><html dir="rtl"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'report-sample'"><link rel="stylesheet" href="style.css"></head><body><dialog></dialog></body></html>`); return;
+  }
   if (!/^(index\.html|style\.css|core\.js|app\.js|bridge\.js|cloud\.js)$/.test(name)) {
     res.writeHead(404); res.end(); return;
   }
@@ -40,6 +44,28 @@ async function run() {
   for (const [name, browserType] of [['chromium', chromium], ['webkit', webkit]]) {
     const browser = await browserType.launch();
     try {
+      if (name === 'webkit') {
+        const probeContext = await browser.newContext();
+        const probe = await probeContext.newPage();
+        await probe.addInitScript(() => {
+          window.probeErrors = [];
+          document.addEventListener('securitypolicyviolation', e => window.probeErrors.push({ directive: e.violatedDirective, sample: e.sample, source: e.sourceFile, line: e.lineNumber }));
+        });
+        await probe.goto(url + '/csp-probe.html');
+        for (const body of ['<p>hello</p>', '<input type="text">', '<input type="text" dir="auto">', '<input type="date">', '<input type="date" dir="auto">', '<input type="datetime-local">', '<input type="datetime-local" dir="auto">', '<input type="number">', '<textarea></textarea>', '<textarea dir="auto"></textarea>', '<select><option>one</option></select>', '<button>save</button>']) {
+          const report = await probe.evaluate(async html => {
+            const d = document.querySelector('dialog');
+            d.close();
+            window.probeErrors.length = 0;
+            d.innerHTML = html;
+            d.showModal();
+            await new Promise(resolve => setTimeout(resolve, 30));
+            return { html, errors: window.probeErrors, inline: Array.from(document.querySelectorAll('[style]'), el => el.outerHTML) };
+          }, body);
+          console.log('CSP_PROBE:' + JSON.stringify(report));
+        }
+        await probeContext.close();
+      }
       const context = await browser.newContext({
         viewport: { width: 390, height: 844 }, deviceScaleFactor: 1,
         isMobile: true, hasTouch: true, locale: 'he-IL', timezoneId: 'Asia/Jerusalem',
