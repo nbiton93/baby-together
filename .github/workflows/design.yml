@@ -1,0 +1,38 @@
+name: Review app design
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'shared/**'
+      - 'scripts/design-preview.cjs'
+      - '.github/workflows/design.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated browser tools
+        run: |
+          npm install --no-save --package-lock=false playwright@1.64.0
+          npx playwright install --with-deps chromium webkit
+      - name: Review real UI in mobile Chromium and WebKit
+        run: node scripts/design-preview.cjs
+        env:
+          TZ: Asia/Jerusalem
+      - name: Save screenshots with synthetic data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baby-together-design
+          path: out/design/
+          if-no-files-found: ignore
+          retention-days: 30

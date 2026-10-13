@@ -2,7 +2,7 @@ import SwiftUI
 import WebKit
 
 @main struct BabyTogetherApp: App {
-    var body: some Scene { WindowGroup { JournalView().background(Color(red:0.969,green:0.965,blue:0.949)).preferredColorScheme(.light) } }
+    var body: some Scene { WindowGroup { JournalView().background(Color(red:1.0,green:0.969,blue:0.988)).preferredColorScheme(.light) } }
 }
 struct JournalView: UIViewRepresentable {
     func makeCoordinator() -> NativeBridge { NativeBridge() }
@@ -13,7 +13,7 @@ struct JournalView: UIViewRepresentable {
         let web = WKWebView(frame: .zero, configuration: config)
         web.navigationDelegate = context.coordinator
         web.isOpaque = false
-        web.backgroundColor = UIColor(red:0.969,green:0.965,blue:0.949,alpha:1)
+        web.backgroundColor = UIColor(red:1.0,green:0.969,blue:0.988,alpha:1)
         context.coordinator.web = web
         if let url = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "shared") {
             context.coordinator.assetRoot = url.deletingLastPathComponent()

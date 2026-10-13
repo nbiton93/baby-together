@@ -42,7 +42,7 @@ public class MainActivity extends ComponentActivity {
     private long tokenUntil;
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved); store=new AtomicFile(new File(getNoBackupFilesDir(),"journal.json"));
-        web=new WebView(this); web.setBackgroundColor(Color.rgb(247,246,242));
+        web=new WebView(this); web.setBackgroundColor(Color.rgb(255,247,252));
         WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);settings.setDomStorageEnabled(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         final WebViewAssetLoader loader=new WebViewAssetLoader.Builder().addPathHandler("/assets/",new WebViewAssetLoader.AssetsPathHandler(this)).build();
