@@ -39,8 +39,8 @@ for source in (root / "shared").iterdir():
         require((args.app / "shared" / source.name).read_bytes() == source.read_bytes(),
                 "Bundled resource mismatch: " + source.name)
 if args.platform == "iPhoneOS":
-    subprocess.run(["xcrun", "lipo", "-verify_arch", "arm64",
-                    str(args.app / info["CFBundleExecutable"])], check=True)
+    subprocess.run(["xcrun", "lipo", str(args.app / info["CFBundleExecutable"]),
+                    "-verify_arch", "arm64"], check=True)
 if args.signed:
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(args.app)], check=True)
     result = subprocess.run(["security", "cms", "-D", "-i", str(args.app / "embedded.mobileprovision")],

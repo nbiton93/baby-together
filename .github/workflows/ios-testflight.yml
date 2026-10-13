@@ -1,0 +1,63 @@
+name: iPhone TestFlight
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Validate with Apple or upload to TestFlight
+        type: choice
+        required: true
+        default: validate
+        options: [validate, upload]
+      build_number:
+        description: Optional unused build number (1-9999); otherwise generated
+        type: string
+        required: false
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ios-testflight.yml'
+      - 'scripts/release-ios.py'
+      - 'tests/test_ios_release.py'
+permissions:
+  contents: read
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+jobs:
+  check-release-tools:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m py_compile scripts/release-ios.py scripts/check-ios-app.py
+      - run: python -m unittest discover -s tests -p 'test_ios_release.py' -v
+  release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: check-release-tools
+    runs-on: macos-15
+    timeout-minutes: 35
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      RELEASE_MODE: ${{ inputs.mode }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check required Apple configuration
+        run: python3 scripts/release-ios.py --check-config
+      - name: Install project generator
+        run: brew install xcodegen
+      - name: Sign, validate and optionally upload
+        run: python3 scripts/release-ios.py --mode "$RELEASE_MODE"
