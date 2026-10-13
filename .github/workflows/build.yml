@@ -17,6 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - run: bash -n scripts/sign-android.sh
       - run: node scripts/check.cjs
       - run: node --test tests/*.test.cjs
         env:
@@ -41,6 +42,22 @@ jobs:
           node scripts/check-google-config.cjs android
           gradle -p android --no-daemon assembleRelease lintRelease -PgoogleConfigured="$GOOGLE_CONFIGURED"
           grep -F 'GOOGLE_CONFIGURED = true' android/app/build/generated/source/buildConfig/release/com/natibiton/babytogether/BuildConfig.java
+      - name: Verify update identity and packaged interface
+        run: |
+          python3 - <<'PY'
+          import pathlib, subprocess, zipfile
+          apk = pathlib.Path("android/app/build/outputs/apk/release/app-release-unsigned.apk")
+          sdk = pathlib.Path(__import__("os").environ["ANDROID_HOME"])
+          aapt = sdk / "build-tools/35.0.0/aapt"
+          metadata = subprocess.check_output([str(aapt), "dump", "badging", str(apk)], text=True)
+          assert "name='com.natibiton.babytogether'" in metadata
+          assert "versionCode='3'" in metadata and "versionName='0.3.0'" in metadata
+          with zipfile.ZipFile(apk) as bundle:
+              for source in pathlib.Path("shared").iterdir():
+                  if source.is_file():
+                      assert bundle.read("assets/" + source.name) == source.read_bytes(), source.name
+          print("Verified Android 0.3.0 (3), original package ID and exact bundled interface.")
+          PY
       - name: Allow this runner to use the emulator
         run: sudo setfacl -m u:"$(id -un)":rw /dev/kvm
       - name: Test journal and Google-enabled screen in Android 16
