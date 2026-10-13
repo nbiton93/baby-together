@@ -59,7 +59,7 @@ async function run() {
           });
         }};
         window.designCspErrors = [];
-        document.addEventListener('securitypolicyviolation', event => window.designCspErrors.push(event.violatedDirective));
+        document.addEventListener('securitypolicyviolation', event => window.designCspErrors.push({ directive: event.violatedDirective, source: event.sourceFile, line: event.lineNumber, blocked: event.blockedURI }));
       }, { data: JSON.stringify(fixture) });
       const page = await context.newPage();
       const errors = [];
@@ -71,15 +71,20 @@ async function run() {
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, name + ': horizontal overflow on ' + label);
         assert.equal(await page.locator('html').getAttribute('dir'), 'rtl');
       }
+      async function cleanCsp(label) {
+        assert.deepEqual(await page.evaluate(() => window.designCspErrors), [], name + ': CSP on ' + label);
+      }
       async function shot(label, log = true) {
         await fits(label);
-        await page.screenshot({ path: join(root, 'out/design', name + '-' + label + '.png'), animations: 'disabled' });
+        await cleanCsp('before ' + label);
+        await page.screenshot({ path: join(root, 'out/design', name + '-' + label + '.png'), animations: 'allow', caret: 'initial' });
         if (log && name === 'webkit') {
-          const image = await page.screenshot({ type: 'jpeg', quality: 78, animations: 'disabled' });
+          const image = await page.screenshot({ type: 'jpeg', quality: 78, animations: 'allow', caret: 'initial' });
           // Only synthetic UI pixels. Used for remote visual review when no local browser is available.
           console.log('DESIGN_IMAGE:' + label + ':' + image.toString('base64'));
         }
       }
+      assert.equal(await page.locator('.stat.sleep strong').innerText(), '1:05');
       await shot('journal');
       await page.locator('[data-action=add][data-kind=feed]').click();
       await page.locator('#amount').fill('80');
@@ -87,6 +92,9 @@ async function run() {
       await page.locator('#entry-form button[type=submit]').click();
       await page.locator('#modal').waitFor({ state: 'hidden' });
       assert.equal(await page.locator('.entry.feed').count(), 3);
+      await page.locator('#toast').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#toast').innerText(), 'נשמר בטלפון');
+      await cleanCsp('save notification');
       await page.reload();
       await page.locator('.entry.feed').first().waitFor();
       assert.equal(await page.locator('.entry.feed').count(), 3);
@@ -101,6 +109,7 @@ async function run() {
       await page.locator('[data-tab=journal]').click();
       await shot('narrow', false);
       await page.locator('[data-kind=sleep][data-action=add]').click();
+      assert.equal(await page.locator('.stat.sleep strong').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true, name + ': sleep summary wraps at 320px');
       await fits('sleep form 320');
       await page.locator('#entry-form button[type=submit]').click();
       await page.locator('#modal').waitFor({ state: 'hidden' });
