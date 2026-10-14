@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+test -f installer/build/outputs/apk/release/installer-release-unsigned.apk
 # This disposable key signs only the SEPARATE installer package.
 # The Baby Together application's existing key is never generated or replaced here.
 helper_key="$RUNNER_TEMP/offline-helper-signing.p12"
@@ -9,7 +10,7 @@ umask 077
 openssl rand -hex 24 > "$helper_password_file"
 keytool -genkeypair -keystore "$helper_key" -storetype PKCS12 -storepass:file "$helper_password_file" -keypass:file "$helper_password_file" -alias offline-helper -keyalg RSA -keysize 3072 -validity 3650 -dname "CN=Baby Together Offline Installer"
 mkdir -p out/installer-release
-"$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$helper_key" --ks-key-alias offline-helper --ks-pass "file:$helper_password_file" --key-pass "file:$helper_password_file" --out out/installer-release/baby-together-0.3.0-installer.apk installer/build/outputs/apk/release/installer-release-unsigned.apk
+"$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$helper_key" --ks-key-alias offline-helper --ks-pass "file:$helper_password_file" --out out/installer-release/baby-together-0.3.0-installer.apk installer/build/outputs/apk/release/installer-release-unsigned.apk
 "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose out/installer-release/baby-together-0.3.0-installer.apk
 python3 - <<'PY'
 import pathlib, zipfile, subprocess, os, hashlib

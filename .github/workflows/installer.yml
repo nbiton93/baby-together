@@ -67,6 +67,8 @@ jobs:
           PY
       - name: Compile and lint installer
         run: gradle -p installer --no-daemon assembleRelease lintRelease assembleDebug assembleDebugAndroidTest -PupdateSha256="$UPDATE_SHA256"
+      - name: Sign separate helper app and verify distributable contents
+        run: bash scripts/installer-package.sh
       - name: Allow emulator access
         run: sudo setfacl -m u:"$(id -un)":rw /dev/kvm
       - name: Verify local signing and install signed update on Android 16
@@ -89,8 +91,6 @@ jobs:
             out/installer-test/
           if-no-files-found: ignore
           retention-days: 14
-      - name: Sign separate helper app and verify distributable contents
-        run: bash scripts/installer-package.sh
       - uses: actions/upload-artifact@v4
         with:
           name: baby-together-0.3.0-offline-installer
