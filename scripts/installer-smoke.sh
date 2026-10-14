@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 mkdir -p out/installer-test
-gradle -p installer --no-daemon connectedDebugAndroidTest -PupdateSha256="$UPDATE_SHA256"
+adb install installer/build/outputs/apk/debug/installer-debug.apk
+adb install installer/build/outputs/apk/androidTest/debug/installer-debug-androidTest.apk
+adb shell am instrument -w -r com.natibiton.babytogether.installer.test/androidx.test.runner.AndroidJUnitRunner | tee out/installer-test/instrumentation.txt
+python3 - <<'PY'
+from pathlib import Path
+result = Path("out/installer-test/instrumentation.txt").read_text()
+assert "OK (1 test)" in result, result
+assert "FAILURES!!!" not in result and "INSTRUMENTATION_FAILED" not in result
+PY
 adb pull /sdcard/Android/data/com.natibiton.babytogether.installer/files/test-signed-update.apk "$RUNNER_TEMP/test-signed-update.apk"
 "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$RUNNER_TEMP/test-signed-update.apk"
 adb install "$RUNNER_TEMP/test-signed-update.apk"
