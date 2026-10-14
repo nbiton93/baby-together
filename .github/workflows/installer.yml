@@ -1,0 +1,129 @@
+name: Build offline Android update installer
+on:
+  push:
+    branches: [main]
+    paths: ['installer/**', 'scripts/installer-*', '.github/workflows/installer.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: offline-installer-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      GOOGLE_CONFIGURED: ${{ vars.GOOGLE_ANDROID_CONFIGURED || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build and verify bundled update
+        run: |
+          node scripts/check-google-config.cjs android
+          node scripts/check.cjs
+          node --test tests/*.test.cjs
+          gradle -p android --no-daemon assembleRelease -PgoogleConfigured="$GOOGLE_CONFIGURED"
+          grep -F 'GOOGLE_CONFIGURED = true' android/app/build/generated/source/buildConfig/release/com/natibiton/babytogether/BuildConfig.java
+          python3 - <<'PY'
+          import pathlib, subprocess, zipfile, os
+          apk = pathlib.Path("android/app/build/outputs/apk/release/app-release-unsigned.apk")
+          metadata = subprocess.check_output([os.environ["ANDROID_HOME"] + "/build-tools/35.0.0/aapt", "dump", "badging", str(apk)], text=True)
+          assert "name='com.natibiton.babytogether'" in metadata
+          assert "versionCode='3'" in metadata and "versionName='0.3.0'" in metadata
+          with zipfile.ZipFile(apk) as z:
+              for source in pathlib.Path("shared").iterdir():
+                  if source.is_file():
+                      assert z.read("assets/" + source.name) == source.read_bytes()
+          PY
+          mkdir -p installer/build/generated/update-assets
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk installer/build/generated/update-assets/baby-together-unsigned.apk
+          python3 - <<'PY'
+          import hashlib, pathlib
+          digest = hashlib.sha256(pathlib.Path("installer/build/generated/update-assets/baby-together-unsigned.apk").read_bytes()).hexdigest()
+          with open(__import__("os").environ["GITHUB_ENV"], "a") as f:
+              f.write("UPDATE_SHA256=" + digest + "\n")
+          PY
+      - name: Create synthetic test fixture (never the user's private key)
+        run: |
+          mkdir -p "$RUNNER_TEMP/installer-fixture" installer/build/generated/test-assets
+          keytool -genkeypair -keystore "$RUNNER_TEMP/installer-fixture/baby-together-signing.p12" -storetype PKCS12 -storepass synthetic-test-password -keypass synthetic-test-password -alias baby-together -keyalg RSA -keysize 2048 -validity 3650 -dname "CN=Disposable Installer Test"
+          printf '%s\n' synthetic-test-password > "$RUNNER_TEMP/installer-fixture/keystore-password.txt"
+          keytool -exportcert -keystore "$RUNNER_TEMP/installer-fixture/baby-together-signing.p12" -storepass synthetic-test-password -alias baby-together -file "$RUNNER_TEMP/installer-fixture/test-cert.der"
+          python3 - <<'PY'
+          import pathlib, zipfile, hashlib, os
+          fixture = pathlib.Path(os.environ["RUNNER_TEMP"]) / "installer-fixture"
+          assets = pathlib.Path("installer/build/generated/test-assets")
+          with zipfile.ZipFile(assets / "synthetic-backup.zip", "w") as z:
+              for name in ["baby-together-signing.p12", "keystore-password.txt"]:
+                  z.write(fixture / name, arcname=name)
+          (assets / "fixture-sha1.txt").write_text(hashlib.sha1((fixture / "test-cert.der").read_bytes()).hexdigest().upper())
+          PY
+      - name: Compile and lint installer
+        run: gradle -p installer --no-daemon assembleRelease lintRelease assembleDebug assembleDebugAndroidTest -PupdateSha256="$UPDATE_SHA256"
+      - name: Allow emulator access
+        run: sudo setfacl -m u:"$(id -un)":rw /dev/kvm
+      - name: Verify local signing and install signed update on Android 16
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: bash scripts/installer-smoke.sh
+      - name: Keep test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-installer-tests
+          path: |
+            installer/build/reports/androidTests/
+            installer/build/outputs/androidTest-results/
+            out/installer-test/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Sign separate helper app and verify distributable contents
+        run: bash scripts/installer-package.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: baby-together-0.3.0-offline-installer
+          path: out/installer-release/
+          retention-days: 30
+      - name: Remove disposable test material
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/installer-fixture" installer/build/generated/test-assets
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: baby-together-0.3.0-offline-installer
+          path: release-files
+      - name: Publish verified installer download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          tag="android-installer-0.3.0-$GITHUB_RUN_NUMBER"
+          cat > release-notes.md <<'EOF'
+          מתקין עזר מקומי לעדכון Baby Together 0.3.0 עם העיצוב הוורוד והסגול.
+
+          מתקינים את קובץ ה-APK של המתקין, בוחרים בטלפון את baby-together-private-signing-backup.zip ולוחצים על התקנת העדכון. Android יבקש אישור התקנה. אפשר גם לשמור את baby-together-0.3.0.apk שנוצר כדי להתקין בטלפון השני.
+
+          למתקין אין הרשאת אינטרנט. מפתח החתימה נקרא בזיכרון בלבד ונבדק מול החתימה המקורית. הקובץ המצורף הוא מתקין העזר, והאפליקציה עצמה נחתמת בטלפון לאחר בחירת הגיבוי.
+
+          נבדק באמולטור Android 16 עם מפתח בדיקה זמני: חתימה מקומית, אימות החתימה, דחיית מפתח שגוי והתקנת העדכון. המפתח הפרטי המקורי אינו כלול בקובץ.
+          EOF
+          gh release create "$tag" release-files/baby-together-0.3.0-installer.apk release-files/SHA256SUMS.txt --repo "$GH_REPO" --target "$RELEASE_SHA" --prerelease --title "Baby Together 0.3.0 · מתקין עדכון לאנדרואיד" --notes-file release-notes.md
