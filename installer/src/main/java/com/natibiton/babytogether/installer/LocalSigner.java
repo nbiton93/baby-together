@@ -47,7 +47,7 @@ public final class LocalSigner {
 
     static void checkIdentity(Context context, File apk) {
         PackageInfo info = context.getPackageManager().getPackageArchiveInfo(apk.getAbsolutePath(), 0);
-        if (info == null || !PACKAGE.equals(info.packageName) || info.getLongVersionCode() != 3
+        if (info == null || !PACKAGE.equals(info.packageName) || info.versionCode != 3
                 || !"0.3.0".equals(info.versionName))
             throw new SecurityException("Unexpected application or version");
     }
